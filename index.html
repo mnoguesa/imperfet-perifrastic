@@ -83,7 +83,7 @@
         const verbs = {
             'ar': ['cantar', 'parlar', 'estudiar', 'ballar', 'caminar', 'mirar', 'observar', 'dinar', 'dibuixar'],
             'er': ['poder', 'perdre', 'combatre', 'emetre', 'rebre', 'batre', 'voler'],
-            're': ['sentir', 'patir', 'servir', 'dormir', 'venir', 'colorir', 'distingir', 'competir', 'detenir']
+            'ir': ['sentir', 'patir', 'servir', 'dormir', 'venir', 'colorir', 'distingir', 'competir', 'detenir']
         };
         const pronouns = ['jo', 'tu', 'ell/ella', 'nosaltres', 'vosaltres', 'ells/elles'];
         const tenses = ['imperfet', 'passat perifràstic'];
@@ -114,7 +114,7 @@
                 if (ending === 'ar') {
                     const endings = ['ava', 'aves', 'ava', 'àvem', 'àveu', 'aven'];
                     return stem + endings[pronounIndex];
-                } else { // -er, -re
+                } else { // -er, -ir
                     const endings = ['ia', 'ies', 'ia', 'íem', 'íeu', 'ien'];
                     return stem + endings[pronounIndex];
                 }
@@ -262,8 +262,8 @@
                 const maxConjErrors = Math.max(arErrors, erErrors, reErrors);
                 if (maxConjErrors > 0) {
                     if (arErrors === maxConjErrors) analysisHTML += "<li>Repassa els verbs de la <strong>primera conjugació (-ar)</strong>. Són els més comuns!</li>";
-                    if (erErrors === maxConjErrors) analysisHTML += "<li>Posa atenció als verbs de la <strong>segona conjugació (-er)</strong>.</li>";
-                    if (reErrors === maxConjErrors) analysisHTML += "<li>Els verbs de la <strong>tercera conjugació (-re)</strong> semblen ser el teu punt feble. Practica una mica més amb ells.</li>";
+                    if (erErrors === maxConjErrors) analysisHTML += "<li>Posa atenció als verbs de la <strong>segona conjugació (-er/-re)</strong>.</li>";
+                    if (reErrors === maxConjErrors) analysisHTML += "<li>Els verbs de la <strong>tercera conjugació (-ir)</strong> semblen ser el teu punt feble. Practica una mica més amb ells.</li>";
                 }
                 
                 analysisHTML += "</ul><p class='mt-4'><strong>Bon treball!</strong> La clau és practicar una mica cada dia. Estàs anant per molt bon camí. Segueix així!</p>";
