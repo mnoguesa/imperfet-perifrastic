@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repàs de Verbs Catalans</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .btn {
+            @apply w-full text-left p-4 rounded-lg transition-colors duration-200;
+        }
+        .btn-option {
+            @apply bg-white hover:bg-indigo-100 border border-gray-300;
+        }
+        .btn-correct {
+            @apply bg-green-500 text-white border-green-500;
+        }
+        .btn-incorrect {
+            @apply bg-red-500 text-white border-red-500;
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
+
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 pb-4 border-b">
+            <h1 class="text-xl md:text-2xl font-bold text-gray-800">Repàs de Verbs Catalans</h1>
+            <div class="text-lg font-semibold bg-indigo-500 text-white px-4 py-2 rounded-lg">
+                Punts: <span id="score">0</span>
+            </div>
+        </header>
+
+        <!-- Game Area -->
+        <main id="game-area">
+            <p class="text-gray-600 mb-2">Pregunta <span id="question-number">1</span>:</p>
+            <p id="question-text" class="text-lg md:text-xl font-semibold text-gray-900 mb-6 min-h-[56px]"></p>
+            
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Options will be dynamically inserted here -->
+            </div>
+            
+            <div id="feedback-container" class="mt-6 min-h-[70px]">
+                <p id="feedback-text" class="text-center text-lg font-medium p-3 rounded-lg"></p>
+            </div>
+
+            <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                <button id="help-button" class="w-full sm:w-auto bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-transform transform hover:scale-105"> necessito AJUDA </button>
+                <button id="next-button" class="w-full sm:w-auto bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-transform transform hover:scale-105" style="display: none;">Següent Pregunta</button>
+            </div>
+        </main>
+
+        <!-- Final Feedback Area -->
+        <div id="final-feedback" style="display: none;" class="text-center">
+            <h2 class="text-2xl font-bold text-indigo-700 mb-4">Sessió Finalitzada!</h2>
+            <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                <p id="final-stats" class="text-lg text-gray-800 mb-4"></p>
+                <div id="final-analysis" class="text-left text-gray-700 space-y-3"></div>
+            </div>
+            <button id="restart-button" class="mt-6 w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-transform transform hover:scale-105">Tornar a començar</button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 pt-4 border-t text-center">
+             <button id="stop-button" class="w-full md:w-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-all">STOP</button>
+        </footer>
+
+    </div>
+
+    <script>
+        const verbs = {
+            'ar': ['cantar', 'parlar', 'estudiar', 'ballar', 'caminar', 'mirar'],
+            'er': ['témer', 'créixer', 'conèixer', 'perdre'],
+            're': ['sentir', 'patir', 'servir', 'dormir']
+        };
+        const pronouns = ['jo', 'tu', 'ell/ella', 'nosaltres', 'vosaltres', 'ells/elles'];
+        const tenses = ['imperfet', 'passat perifràstic'];
+
+        let score = 0;
+        let totalQuestions = 0;
+        let answeredQuestions = 0;
+        let currentCorrectAnswer = '';
+        let currentQuestionDetails = {};
+        let errorLog = [];
+        let questionAnswered = false;
+
+        const scoreEl = document.getElementById('score');
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsContainerEl = document.getElementById('options-container');
+        const feedbackTextEl = document.getElementById('feedback-text');
+        const helpButton = document.getElementById('help-button');
+        const nextButton = document.getElementById('next-button');
+        const stopButton = document.getElementById('stop-button');
+
+        function getConjugation(verb, pronoun, tense) {
+            const pronounIndex = pronouns.indexOf(pronoun);
+            const ending = verb.slice(-2);
+            const stem = verb.slice(0, -2);
+
+            if (tense === 'imperfet') {
+                if (ending === 'ar') {
+                    const endings = ['ava', 'aves', 'ava', 'àvem', 'àveu', 'aven'];
+                    return stem + endings[pronounIndex];
+                } else { // -er, -re
+                    const endings = ['ia', 'ies', 'ia', 'íem', 'íeu', 'ien'];
+                    return stem + endings[pronounIndex];
+                }
+            } else if (tense === 'passat perifràstic') {
+                const auxiliary = ['vaig', 'vas', 'va', 'vam', 'vau', 'van'];
+                return auxiliary[pronounIndex] + ' ' + verb;
+            }
+        }
+
+        function generateQuestion() {
+            totalQuestions++;
+            questionAnswered = false;
+            
+            // UI Reset
+            questionNumberEl.textContent = totalQuestions;
+            feedbackTextEl.textContent = '';
+            feedbackTextEl.className = 'text-center text-lg font-medium p-3 rounded-lg';
+            nextButton.style.display = 'none';
+            helpButton.disabled = false;
+            
+            // Question generation
+            const conjugationType = Object.keys(verbs)[Math.floor(Math.random() * Object.keys(verbs).length)];
+            const verb = verbs[conjugationType][Math.floor(Math.random() * verbs[conjugationType].length)];
+            const pronoun = pronouns[Math.floor(Math.random() * pronouns.length)];
+            const tense = tenses[Math.floor(Math.random() * tenses.length)];
+
+            currentQuestionDetails = { verb, pronoun, tense, conjugationType };
+            
+            questionTextEl.innerHTML = `Com es diu la forma verbal per a <strong>'${pronoun}'</strong> del verb <strong>'${verb}'</strong> en <strong>${tense}</strong>?`;
+
+            currentCorrectAnswer = getConjugation(verb, pronoun, tense);
+            
+            let options = new Set([currentCorrectAnswer]);
+            while (options.size < 4) {
+                const randomPronoun = pronouns[Math.floor(Math.random() * pronouns.length)];
+                const randomTense = Math.random() < 0.5 ? tense : tenses.find(t => t !== tense);
+                const wrongOption = getConjugation(verb, randomPronoun, randomTense);
+                if (wrongOption !== currentCorrectAnswer) {
+                    options.add(wrongOption);
+                }
+            }
+
+            options = Array.from(options).sort(() => Math.random() - 0.5);
+
+            optionsContainerEl.innerHTML = '';
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('btn', 'btn-option');
+                button.onclick = () => checkAnswer(button, option);
+                optionsContainerEl.appendChild(button);
+            });
+        }
+        
+        function checkAnswer(button, selectedOption) {
+            if (questionAnswered) return;
+            questionAnswered = true;
+            answeredQuestions++;
+            helpButton.disabled = true;
+
+            const allButtons = optionsContainerEl.querySelectorAll('button');
+            allButtons.forEach(btn => btn.disabled = true);
+            
+            if (selectedOption === currentCorrectAnswer) {
+                score++;
+                scoreEl.textContent = score;
+                button.classList.remove('btn-option');
+                button.classList.add('btn-correct');
+                feedbackTextEl.textContent = "Molt bé! Has encertat! 🎉";
+                feedbackTextEl.classList.add('text-green-700', 'bg-green-100');
+            } else {
+                button.classList.remove('btn-option');
+                button.classList.add('btn-incorrect', 'shake');
+                feedbackTextEl.innerHTML = `Gairebé! La resposta correcta era <strong>${currentCorrectAnswer}</strong>. Continua així! 💪`;
+                feedbackTextEl.classList.add('text-red-700', 'bg-red-100');
+                errorLog.push(currentQuestionDetails);
+                
+                // Highlight the correct answer
+                 allButtons.forEach(btn => {
+                    if (btn.textContent === currentCorrectAnswer) {
+                        btn.classList.remove('btn-option');
+                        btn.classList.add('btn-correct');
+                    }
+                });
+            }
+            nextButton.style.display = 'inline-block';
+        }
+
+        helpButton.addEventListener('click', () => {
+            const { conjugationType, pronoun, tense } = currentQuestionDetails;
+            let verbList = verbs[conjugationType];
+            let hintVerb = verbList[Math.floor(Math.random() * verbList.length)];
+            
+            // Ensure hint verb is different from the question verb
+            while (hintVerb === currentQuestionDetails.verb && verbList.length > 1) {
+                 hintVerb = verbList[Math.floor(Math.random() * verbList.length)];
+            }
+
+            const hintConjugation = getConjugation(hintVerb, pronoun, tense);
+            feedbackTextEl.innerHTML = `PISTA: Un altre verb de la mateixa conjugació és <strong>'${hintVerb}'</strong>. La forma seria: <strong>'${hintConjugation}'</strong>.`;
+            feedbackTextEl.classList.add('text-amber-700', 'bg-amber-100');
+            helpButton.disabled = true;
+        });
+
+        nextButton.addEventListener('click', generateQuestion);
+        
+        stopButton.addEventListener('click', () => {
+            document.getElementById('game-area').style.display = 'none';
+            stopButton.style.display = 'none';
+            const finalFeedbackEl = document.getElementById('final-feedback');
+            finalFeedbackEl.style.display = 'block';
+
+            const totalAnswered = answeredQuestions;
+            const mistakes = errorLog.length;
+            const accuracy = totalAnswered > 0 ? ((totalAnswered - mistakes) / totalAnswered * 100).toFixed(0) : 0;
+            
+            document.getElementById('final-stats').innerHTML = `
+                Has respost a <strong>${totalAnswered}</strong> preguntes.<br>
+                Encerts: <strong class="text-green-600">${score}</strong> | Errors: <strong class="text-red-600">${mistakes}</strong><br>
+                Percentatge d'encerts: <strong class="text-indigo-600">${accuracy}%</strong>
+            `;
+
+            let analysisHTML = '<h3 class="font-bold text-lg mb-2 text-gray-800">Anàlisi i consells:</h3>';
+            if (mistakes === 0 && totalAnswered > 0) {
+                 analysisHTML += "<p class='text-green-600'><strong>Felicitats!</strong> Ho has fet perfecte. Sembla que domines molt bé aquests temps verbals. Continua practicant per no perdre el ritme!</p>";
+            } else if (totalAnswered === 0) {
+                 analysisHTML += "<p>No has respost a cap pregunta. La propera vegada, intenta-ho!</p>";
+            } else {
+                const tenseErrors = errorLog.filter(e => e.tense === 'imperfet').length;
+                const periphrasticErrors = mistakes - tenseErrors;
+
+                const arErrors = errorLog.filter(e => e.conjugationType === 'ar').length;
+                const erErrors = errorLog.filter(e => e.conjugationType === 'er').length;
+                const reErrors = errorLog.filter(e => e.conjugationType === 're').length;
+
+                analysisHTML += "<ul class='list-disc list-inside space-y-2'>";
+                if (periphrasticErrors > tenseErrors) {
+                    analysisHTML += "<li>He notat que has tingut més dificultats amb el <strong>passat perifràstic</strong>. Recorda que es forma amb el verb 'anar' (vaig, vas, va...) + l'infinitiu.</li>";
+                } else if (tenseErrors > periphrasticErrors) {
+                    analysisHTML += "<li>Sembla que l'<strong>imperfet</strong> és el que et costa una mica més. Repassa bé les terminacions: '-ava' per als verbs en '-ar' i '-ia' per als verbs en '-er' i '-re'.</li>";
+                } else if (mistakes > 0) {
+                     analysisHTML += "<li>Has tingut un nombre similar d'errors en tots dos temps. Un repàs general de tots dos t'anirà molt bé.</li>";
+                }
+
+                const maxConjErrors = Math.max(arErrors, erErrors, reErrors);
+                if (maxConjErrors > 0) {
+                    if (arErrors === maxConjErrors) analysisHTML += "<li>Repassa els verbs de la <strong>primera conjugació (-ar)</strong>. Són els més comuns!</li>";
+                    if (erErrors === maxConjErrors) analysisHTML += "<li>Posa atenció als verbs de la <strong>segona conjugació (-er)</strong>.</li>";
+                    if (reErrors === maxConjErrors) analysisHTML += "<li>Els verbs de la <strong>tercera conjugació (-re)</strong> semblen ser el teu punt feble. Practica una mica més amb ells.</li>";
+                }
+                
+                analysisHTML += "</ul><p class='mt-4'><strong>Bon treball!</strong> La clau és practicar una mica cada dia. Estàs anant per molt bon camí. Segueix així!</p>";
+            }
+            document.getElementById('final-analysis').innerHTML = analysisHTML;
+        });
+
+        document.getElementById('restart-button').addEventListener('click', () => {
+            location.reload();
+        });
+
+        // Initial question
+        window.onload = generateQuestion;
+    </script>
+</body>
+</html>
